@@ -1,115 +1,75 @@
 #include "shell.h"
 
-/**
- * _myhistory - displays the history list, one command by line, preceded
- *              with line numbers, starting at 0.
- * @data: Structure containing potential arguments. Used to maintain
- *        constant function prototype.
- *  Return: Always 0
- */
-int _myhistory(data_t *data)
-{
-	print_list(data->history);
-	return (0);
-}
+char **_copyenv(void);
+void free_env(void);
+char **_getenv(const char *var);
 
 /**
- * unset_alias - sets alias to string
- * @data: parameter struct
- * @str: the string alias
+ * _copyenv - Creates a copy of the environment.
  *
- * Return: Always 0 on success, 1 on error
+ * Return: If an error occurs - NULL.
+ *         O/w - a double pointer to the new copy.
  */
-int unset_alias(data_t *data, char *str)
+char **_copyenv(void)
 {
-	char *p, c;
-	int ret;
+	char **new_environ;
+	size_t size;
+	int index;
 
-	p = _strchr(str, '=');
-	if (!p)
-		return (1);
-	c = *p;
-	*p = 0;
-	ret = delete_node_at_index(&(data->alias),
-		get_node_index(data->alias, node_starts_with(data->alias, str, -1)));
-	*p = c;
-	return (ret);
-}
+	for (size = 0; environ[size]; size++)
+		;
 
-/**
- * set_alias - sets alias to string
- * @data: parameter struct
- * @str: the string alias
- *
- * Return: Always 0 on success, 1 on error
- */
-int set_alias(data_t *data, char *str)
-{
-	char *p;
+	new_environ = malloc(sizeof(char *) * (size + 1));
+	if (!new_environ)
+		return (NULL);
 
-	p = _strchr(str, '=');
-	if (!p)
-		return (1);
-	if (!*++p)
-		return (unset_alias(data, str));
-
-	unset_alias(data, str);
-	return (add_node_end(&(data->alias), str, 0) == NULL);
-}
-
-/**
- * print_alias - prints an alias string
- * @node: the alias node
- *
- * Return: Always 0 on success, 1 on error
- */
-int print_alias(list_t *node)
-{
-	char *p = NULL, *a = NULL;
-
-	if (node)
+	for (index = 0; environ[index]; index++)
 	{
-		p = _strchr(node->str, '=');
-		for (a = node->str; a <= p; a++)
-			_putchar(*a);
-		_putchar('\'');
-		_puts(p + 1);
-		_puts("'\n");
-		return (0);
-	}
-	return (1);
-}
+		new_environ[index] = malloc(_strlen(environ[index]) + 1);
 
-/**
- * _myalias - mimics the alias builtin (man alias)
- * @data: Structure containing potential arguments. Used to maintain
- *          constant function prototype.
- *  Return: Always 0
- */
-int _myalias(data_t *data)
-{
-	int i = 0;
-	char *p = NULL;
-	list_t *node = NULL;
-
-	if (data->argc == 1)
-	{
-		node = data->alias;
-		while (node)
+		if (!new_environ[index])
 		{
-			print_alias(node);
-			node = node->next;
+			for (index--; index >= 0; index--)
+				free(new_environ[index]);
+			free(new_environ);
+			return (NULL);
 		}
-		return (0);
+		_strcpy(new_environ[index], environ[index]);
 	}
-	for (i = 1; data->argv[i]; i++)
+	new_environ[index] = NULL;
+
+	return (new_environ);
+}
+
+/**
+ * free_env - Frees the the environment copy.
+ */
+void free_env(void)
+{
+	int index;
+
+	for (index = 0; environ[index]; index++)
+		free(environ[index]);
+	free(environ);
+}
+
+/**
+ * _getenv - Gets an environmental variable from the PATH.
+ * @var: The name of the environmental variable to get.
+ *
+ * Return: If the environmental variable does not exist - NULL.
+ *         Otherwise - a pointer to the environmental variable.
+ */
+char **_getenv(const char *var)
+{
+	int index, len;
+
+	len = _strlen(var);
+	for (index = 0; environ[index]; index++)
 	{
-		p = _strchr(data->argv[i], '=');
-		if (p)
-			set_alias(data, data->argv[i]);
-		else
-			print_alias(node_starts_with(data->alias, data->argv[i], '='));
+		if (_strncmp(var, environ[index], len) == 0)
+			return (&environ[index]);
 	}
 
-	return (0);
+	return (NULL);
 }
